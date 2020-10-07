@@ -15,14 +15,19 @@
         }
     },
     "require": {
-        "php": "^7.2"
+        "php": "^7.2",
+        "chiron/http-exceptions": "^2.0",
+        "chiron/http-message-util": "^1.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^8.0",
         "phpstan/phpstan": "^0.12",
         "phpstan/phpstan-phpunit": "^0.12",
         "overtrue/phplint": "^2.0",
-        "chiron/coding-standard": "^3.0"
+        "chiron/coding-standard": "^3.0",
+        "chiron/container": "^3.6",
+        "chiron/http": "^1.1",
+        "nyholm/psr7": "^1.3"
     },
     "scripts": {
         "phpunit": "phpunit --colors=always",
