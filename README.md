@@ -2,7 +2,7 @@
 
 PSR15 Middleware to protect your application againts [Cross-Site Request Forgery](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
 
-[![Build Status](https://img.shields.io/travis/org/ncou/csrf/master.svg?style=flat-square)](https://travis-ci.org/ncou/csrf)
+[![Build Status](https://img.shields.io/travis/ncou/csrf/master.svg?style=flat-square)](https://travis-ci.org/ncou/csrf)
 [![Latest Version](https://img.shields.io/github/release/ncou/csrf.svg?style=flat-square)](https://packagist.org/packages/chiron/csrf)
 [![Total Downloads](https://img.shields.io/packagist/dt/chiron/csrf.svg?style=flat-square)](https://packagist.org/packages/chiron/csrf)
 
