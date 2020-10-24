@@ -1,44 +1,108 @@
-# My Awesome Project
+# HTTP CSRF Protection - Middleware (PSR15)
 
-This is the catchphrase: what does this project do and how is it unique?
+PSR15 Middleware to protect your application againts [Cross-Site Request Forgery](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
 
-[![Build Status](https://img.shields.io/travis/org/PHP-DI/PHP-DI/master.svg?style=flat-square)](https://travis-ci.org/PHP-DI/PHP-DI)
-[![Latest Version](https://img.shields.io/github/release/PHP-DI/PHP-DI.svg?style=flat-square)](https://packagist.org/packages/PHP-DI/php-di)
-[![Total Downloads](https://img.shields.io/packagist/dt/PHP-DI/PHP-DI.svg?style=flat-square)](https://packagist.org/packages/PHP-DI/php-di)
+[![Build Status](https://img.shields.io/travis/org/ncou/csrf/master.svg?style=flat-square)](https://travis-ci.org/ncou/csrf)
+[![Latest Version](https://img.shields.io/github/release/ncou/csrf/csrf.svg?style=flat-square)](https://packagist.org/packages/ncou/csrf)
+[![Total Downloads](https://img.shields.io/packagist/dt/ncou/csrf/csrf.svg?style=flat-square)](https://packagist.org/packages/ncou/csrf)
 
-Here is an additional quick introduction, if necessary.
+This middleware use the Cookies to store a token used for comparaison in each "unsafe" request (`POST`/`PUT`/`PATCH`/`DELETE`).
 
 ## Why?
 
-Why does this project exist? Come on, don't delete this part. Fill it.
-Yes it's hard, but it's perhaps the most important part of the README.
-
-As to why *this* project exist, it's to serve as a template for future open
-source PHP projects. Of course, feel free to fork it and make your own recipe.
+Because.
 
 ## Installation
 
-Describe how to install the project/library/framework/…
+```bash
+$ composer require chiron/csrf
+```
 
-Make sure your installation instructions work by testing them!
+To activate the extension:
+
+```php
+[
+    //...
+    XXX\CsrfBootloader::class,
+]
+```
+
+The extension will activate `Chiron\Csrf\Middleware\CsrfTokenMiddleware` to issue a unique token for every user request.
+
+## Enable Protection - Specific Route
+
+The extension provides a middleware `CsrfProtectionMiddleware` which activates the protection on your routes (specific route or every routes). 
+This middleware will protect all the requests for the "unsafe" methods `POST`, `PUT`, `PATCH`, `DELETE`.
+
+```php
+use Chiron\Csrf\Middleware\CsrfProtectionMiddleware;
+
+// ...
+
+public function boot(RouterInterface $router)
+{
+    $route = new Route('/', new Target\Action(HomeController::class, 'index'));
+
+    $router->setRoute(
+        'index',
+        $route->withMiddleware(CsrfProtectionMiddleware::class)
+    );
+}
+```
+
+## Enable Protection - All Routes
+
+To activate CSRF protection on all the routes, you need to "globally" register `Chiron\Csrf\Middleware\CsrfProtectionMiddleware` via `MiddlewareQueue`:
+
+```php
+use Chiron\Csrf\Middleware\CsrfProtectionMiddleware;
+
+// ...
+
+public function boot(MiddlewareQueue $middlewares)
+{
+    $middlewares->addMiddleware(CsrfProtectionMiddleware::class);
+}
+```
 
 ## Usage
 
-Describe how to use the project. A gif or a short code example is the best
-way to show how it works. Also keep paragraphs short and sentences simple: not
-everybody speaks english well.
+Once the protection is activated, you must sign every request with the token available via PSR-7 attribute `csrfToken`.
 
-For the sake of the example here is how you can use this project template
-as a basis for your own repository:
+To receive this token in the controller or view:
 
-```bash
-git clone https://github.com/ncou/project-template.git my-project
-cd my-project
-# Remove the git repository metadata
-rm -rf .git/
-# Start a brand new repository
-git init
-git add .
+```php
+public function index(ServerRequestInterface $request)
+{
+    $csrfToken = $request->getAttribute('csrfToken');
+}
+``` 
+
+Every `POST`/`PUT`/`PATCH`/`DELETE` request from the user must include this token as POST parameter `csrf-token` or header `X-CSRF-Token`.
+Users will receive `403 Access to the specified resource has been forbidden because CSRF verification failed.` if a token is missing.
+Users will receive `412 Request to the specified resource has been aborted because CSRF token is invalid.` if the token has been tampered (and the cookie will be deleted).
+
+```php
+public function index(ServerRequestInterface $request)
+{
+    $form = '
+        <form method="post">
+          <input type="hidden" name="csrf-token" value="{csrfToken}"/>
+          <input type="text" name="value"/>
+          <input type="submit"/>
+        </form>
+    ';
+
+    $form = str_replace(
+        '{csrfToken}',
+        $request->getAttribute('csrfToken'),
+        $form
+    );
+
+    return $form;
+}
 ```
 
-Easy peasy! Now you just have to code.
+## TODO
+- Add documentation on the "csrf_token()" helper.
+- Create a TwigExtension class to add the csrf_token.
