@@ -10,7 +10,7 @@ final class CsrfTokenMiddlewareBootloader extends AbstractBootloader
 {
     public function boot(MiddlewareQueue $middlewares): void
     {
-        // add the token middleware AFTER the EncryptCookieMiddleware (defined with PRIORITY_MAX - 10).
-        $middlewares->addMiddleware(CsrfTokenMiddleware::class, MiddlewareQueue::PRIORITY_MAX - 30);
+        // add the csrf token middleware AFTER the EncryptCookieMiddleware (defined with PRIORITY_MAX - 10).
+        $middlewares->addMiddleware(CsrfTokenMiddleware::class, MiddlewareQueue::PRIORITY_HIGH);
     }
 }
