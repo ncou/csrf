@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use Chiron\Core\Exception\ScopeException;
-use Psr\Http\Message\ServerRequestInterface;
 use Chiron\Csrf\Middleware\CsrfTokenMiddleware;
+use Psr\Http\Message\ServerRequestInterface;
 
 if (! function_exists('csrf_token')) {
     /**

@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace Chiron\Csrf\Config;
 
 use Chiron\Config\AbstractInjectableConfig;
-use Chiron\Config\Helper\Validator;
-use Closure;
 use Nette\Schema\Expect;
 use Nette\Schema\Schema;
-use Twig\Cache\CacheInterface;
 
 //https://github.com/codeigniter4/CodeIgniter4/blob/2d9d652c1eada3aad7c17705df1dd99aa0c837b3/app/Config/App.php#L308
 //https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie/SameSite
@@ -57,7 +54,6 @@ final class CsrfConfig extends AbstractInjectableConfig
     {
         return $this->get('cookie');
     }
-
 
     /**
      * @return int|null

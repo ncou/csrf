@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace Chiron\Csrf\Middleware;
 
+use Chiron\Csrf\Exception\TokenMismatchException;
+use Chiron\Http\Message\RequestMethod as Method;
+use LogicException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Chiron\Http\Message\Cookie;
-use Chiron\Http\Message\RequestMethod as Method;
-use Chiron\Csrf\Exception\TokenMismatchException;
-use LogicException;
 
 // Helper methodes =>
 //https://codeigniter4.github.io/userguide/libraries/security.html#id2
@@ -94,13 +93,15 @@ final class CsrfProtectionMiddleware implements MiddlewareInterface
      * Fetch token from request.
      *
      * @param ServerRequestInterface $request
+     *
      * @return string
      */
     private function fetchToken(ServerRequestInterface $request): string
     {
         if ($request->hasHeader(self::HEADER)) {
             $headers = $request->getHeader(self::HEADER);
-            return reset($headers);
+
+            return reset($headers); // TODO : attention la méthode reset() peut renvoyer false !!!! donc le typehint de cette méthode n'est pas correct !!!!
         }
 
         $data = $request->getParsedBody();

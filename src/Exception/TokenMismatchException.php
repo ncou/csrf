@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Chiron\Csrf\Exception;
 
 use Chiron\Http\Exception\Client\ForbiddenHttpException;
-//use Throwable;
 
 /**
  * Represents an HTTP 403 error caused by a mismatched CSRF token
@@ -23,7 +22,7 @@ class TokenMismatchException extends ForbiddenHttpException
     //public function __construct(?string $message = null, ?int $code = null, ?Throwable $previous = null)
     public function __construct(?string $message = null)
     {
-        if (empty($message)) {
+        if ($message === null) {
             $message = 'Access to the specified resource has been forbidden because CSRF verification failed.';
         }
 

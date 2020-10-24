@@ -4,20 +4,21 @@ declare(strict_types=1);
 
 namespace Chiron\Csrf\Middleware;
 
+use Chiron\Config\SecurityConfig;
+use Chiron\Core\Support\Security;
+use Chiron\Csrf\Config\CsrfConfig;
+use Chiron\Csrf\Exception\InvalidTokenException;
+use Chiron\Http\Message\Cookie;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Chiron\Http\Message\Cookie;
-use Chiron\Csrf\Config\CsrfConfig;
-use Chiron\Config\SecurityConfig;
-use Chiron\Core\Support\Security;
-use Chiron\Csrf\Exception\InvalidTokenException;
 
 //https://github.com/cakephp/cakephp/blob/master/src/Http/Middleware/CsrfProtectionMiddleware.php
 ////https://github.com/Riimu/Kit-CSRF/blob/master/src/CSRFHandler.php#L202
 
 // TODO : gérer le 'path' dans le cookie header. cf //'path' => $request->getAttribute('webroot'), // https://github.com/cakephp/cakephp/blob/master/src/Http/Middleware/CsrfProtectionMiddleware.php#L331
+// TODO : attention à bien gérer le basePath => https://github.com/spiral/framework/blob/aad9e94182cc819201ab0206da6078a0e1c33130/src/AuthHttp/src/Transport/CookieTransport.php#L95
 
 /**
  * Provides generic CSRF protection using cookie as token storage. Set "csrfToken" attribute to request.
@@ -51,7 +52,7 @@ final class CsrfTokenMiddleware implements MiddlewareInterface
 
     /**
      * @param SecurityConfig $securityConfig
-     * @param CsrfConfig $csrfConfig
+     * @param CsrfConfig     $csrfConfig
      */
     public function __construct(SecurityConfig $securityConfig, CsrfConfig $csrfConfig)
     {
@@ -60,9 +61,6 @@ final class CsrfTokenMiddleware implements MiddlewareInterface
         $this->csrfConfig = $csrfConfig;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $token = $this->getCookieToken($request);
@@ -92,7 +90,7 @@ final class CsrfTokenMiddleware implements MiddlewareInterface
      *
      * @throws InvalidTokenException Remove the altered cookie and throw an Http 412 Precondition-Failed exception.
      *
-     * @return null|string
+     * @return string|null
      */
     private function getCookieToken(ServerRequestInterface $request): ?string
     {
@@ -163,9 +161,9 @@ final class CsrfTokenMiddleware implements MiddlewareInterface
             $this->csrfConfig->getCookie(),
             $token,
             [
-                'expires' => time() + $this->csrfConfig->getCookieLifetime(),
+                'expires'  => time() + $this->csrfConfig->getCookieLifetime(),
                 //'path' => null, //'path' => $request->getAttribute('webroot'), // https://github.com/cakephp/cakephp/blob/master/src/Http/Middleware/CsrfProtectionMiddleware.php#L331
-                'secure' => $this->csrfConfig->isCookieSecure(),
+                'secure'   => $this->csrfConfig->isCookieSecure(),
                 'samesite' => $this->csrfConfig->getSameSite(),
                 'httponly' => true,
             ]

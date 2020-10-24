@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Chiron\Csrf\Exception;
 
-use Chiron\Http\Exception\Client\PreconditionFailedHttpException ;
-//use Throwable;
+use Chiron\Http\Exception\Client\PreconditionFailedHttpException;
 
 /**
  * Represents an HTTP 412 error caused by an invalid CSRF token
@@ -23,7 +22,7 @@ class InvalidTokenException extends PreconditionFailedHttpException
     //public function __construct(?string $message = null, ?int $code = null, ?Throwable $previous = null)
     public function __construct(?string $message = null)
     {
-        if (empty($message)) {
+        if ($message === null) {
             $message = 'Request to the specified resource has been aborted because CSRF token is invalid.';
         }
 
