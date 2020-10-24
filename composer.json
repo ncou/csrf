@@ -39,5 +39,13 @@
         "phplint": "phplint --ansi",
         "check-style": "phpcs src tests",
         "fix-style": "phpcbf src tests"
+    },
+    "extra": {
+        "chiron": {
+            "bootloaders": [
+                "Chiron\\Csrf\\Bootloader\\PublishMaintenanceBootloader",
+                "Chiron\\Csrf\\Bootloader\\CsrfTokenMiddlewareBootloader"
+            ]
+      }
     }
 }
