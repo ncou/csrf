@@ -8,7 +8,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Chiron\Cookies\Cookie;
+use Chiron\Http\Message\Cookie;
 use Chiron\Http\Message\RequestMethod as Method;
 use Chiron\Csrf\Exception\TokenMismatchException;
 use LogicException;
@@ -87,7 +87,7 @@ final class CsrfProtectionMiddleware implements MiddlewareInterface
      */
     private function isTokenRequired(ServerRequestInterface $request): bool
     {
-        return in_array(strtoupper($request->getMethod()), self::NOT_SAFE_METHODS, true);
+        return in_array(strtoupper($request->getMethod()), self::NOT_SAFE_METHODS);
     }
 
     /**

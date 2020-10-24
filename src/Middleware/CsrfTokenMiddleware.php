@@ -8,10 +8,10 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Chiron\Cookies\Cookie;
+use Chiron\Http\Message\Cookie;
 use Chiron\Csrf\Config\CsrfConfig;
 use Chiron\Config\SecurityConfig;
-use Chiron\Core\Helper\Random;
+use Chiron\Core\Support\Security;
 use Chiron\Csrf\Exception\InvalidTokenException;
 
 //https://github.com/cakephp/cakephp/blob/master/src/Http/Middleware/CsrfProtectionMiddleware.php
@@ -31,11 +31,11 @@ final class CsrfTokenMiddleware implements MiddlewareInterface
      */
     public const ATTRIBUTE = 'csrfToken';
     /**
-     * Length of the token 'key' part in characters.
+     * Length of the token 'id' part in characters.
      */
-    public const TOKEN_KEY_LENGTH = 16;
+    public const TOKEN_ID_LENGTH = 16;
     /**
-     * Length of the token (key + hmac) characters.
+     * Length of the token (id + hmac) characters.
      */
     public const TOKEN_LENGTH = 16 + 40;
     /**
@@ -55,6 +55,7 @@ final class CsrfTokenMiddleware implements MiddlewareInterface
      */
     public function __construct(SecurityConfig $securityConfig, CsrfConfig $csrfConfig)
     {
+        // Secret key (hexa 64 chars) will be used to keyed an hash value used as signature.
         $this->secretKey = $securityConfig->getKey();
         $this->csrfConfig = $csrfConfig;
     }
@@ -126,10 +127,10 @@ final class CsrfTokenMiddleware implements MiddlewareInterface
             return false;
         }
 
-        $key = substr($token, 0, self::TOKEN_KEY_LENGTH);
-        $hmac = substr($token, self::TOKEN_KEY_LENGTH);
+        $id = substr($token, 0, self::TOKEN_ID_LENGTH);
+        $hmac = substr($token, self::TOKEN_ID_LENGTH);
 
-        $expectedHmac = hash_hmac(self::HASH_FUNCTION_NAME, $key, $this->secretKey);
+        $expectedHmac = hash_hmac(self::HASH_FUNCTION_NAME, $id, $this->secretKey);
 
         return hash_equals($hmac, $expectedHmac);
     }
@@ -142,11 +143,11 @@ final class CsrfTokenMiddleware implements MiddlewareInterface
      */
     private function createToken(): string
     {
-        $key = Random::generateString(self::TOKEN_KEY_LENGTH);
+        $id = Security::generateId(self::TOKEN_ID_LENGTH);
         // Generate a keyed hash value to sign token.
-        $hmac = hash_hmac(self::HASH_FUNCTION_NAME, $key, $this->secretKey);
+        $hmac = hash_hmac(self::HASH_FUNCTION_NAME, $id, $this->secretKey);
 
-        return $key . $hmac;
+        return $id . $hmac;
     }
 
     /**
