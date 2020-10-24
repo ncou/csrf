@@ -80,9 +80,9 @@ public function index(ServerRequestInterface $request)
 
 Every `POST`/`PUT`/`PATCH`/`DELETE` request from the user must include this token as POST parameter `csrf-token` or header `X-CSRF-Token`.
 
-Users will receive `403 Access to the specified resource has been forbidden because CSRF verification failed.` if a token is missing.
+Users will receive an error `403 Forbidden` if a token is missing.
 
-Users will receive `412 Request to the specified resource has been aborted because CSRF token is invalid.` if the token has been tampered (and the cookie will be deleted).
+Users will receive an error `412 Precondition Failed` if the token has been tampered (and the cookie will be deleted).
 
 ```php
 public function index(ServerRequestInterface $request)
