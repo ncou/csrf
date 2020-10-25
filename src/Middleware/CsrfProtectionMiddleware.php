@@ -19,6 +19,8 @@ use Psr\Http\Server\RequestHandlerInterface;
 //https://github.com/yiisoft/csrf/blob/master/src/CsrfMiddleware.php#L42
 //https://github.com/selective-php/csrf/blob/master/src/CsrfMiddleware.php#L192
 
+// TODO : créer une méthode [__constructor(?array $methods = null)] ou [__constructor(array $methods = self::NOT_SAFE_METHODS)] qui prendrait un array avec les request methodes à vérifier, si la valeur est nulle par défaut on utilisera le tableau self::NOT_SAFE_METHODS, cela permet de customiser le middleware. et on pourra utiliser une constante ANY si besoin (ex : new CsrfProtectionMiddleware(Method::ANY)) pour activer la protection sur les méthodes safe et unsafe à la fois.
+
 /**
  * Provides generic CSRF protection using cookie as token storage. Set "csrfToken" attribute to request.
  *

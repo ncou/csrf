@@ -34,15 +34,18 @@ final class CsrfTokenMiddleware implements MiddlewareInterface
     /**
      * Length of the token 'id' part in characters.
      */
+    // TODO : passer cette constante en privée
     public const TOKEN_ID_LENGTH = 16;
     /**
      * Length of the token (id + hmac) characters.
      */
+    // TODO : passer cette constante en privée + utiliser la constante TOKEN_ID_LENGTH lorsqu'on fait la somme.
     public const TOKEN_LENGTH = 16 + 40;
     /**
      * Hash algo used in the hmac function.
      * Lenght is 160-bits (20-bytes) it's 40 chars as hexa result.
      */
+    // TODO : passer cette constante en privée
     public const HASH_FUNCTION_NAME = 'sha1';
 
     /** @var string */
@@ -54,6 +57,7 @@ final class CsrfTokenMiddleware implements MiddlewareInterface
      * @param SecurityConfig $securityConfig
      * @param CsrfConfig     $csrfConfig
      */
+    // TODO : utiliser le champ length pour paramétrer la longeur du token_id qui sera utilisé !!!
     public function __construct(SecurityConfig $securityConfig, CsrfConfig $csrfConfig)
     {
         // Secret key (hexa 64 chars) will be used to keyed an hash value used as signature.

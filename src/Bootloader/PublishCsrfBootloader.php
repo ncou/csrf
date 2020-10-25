@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Chiron\Csrf\Bootloader;
 
-use Chiron\Core\Directories;
 use Chiron\Bootload\AbstractBootloader;
+use Chiron\Core\Directories;
 use Chiron\PublishableCollection;
 
 final class PublishCsrfBootloader extends AbstractBootloader

@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Chiron\Csrf\Bootloader;
 
 use Chiron\Bootload\AbstractBootloader;
-use Chiron\Http\MiddlewareQueue;
 use Chiron\Csrf\Middleware\CsrfTokenMiddleware;
+use Chiron\Http\MiddlewareQueue;
 
 final class CsrfTokenMiddlewareBootloader extends AbstractBootloader
 {
