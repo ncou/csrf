@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Chiron\Csrf\Tests;
 
-use Chiron\Config\SecurityConfig;
+use Chiron\Security\Config\SecurityConfig;
 use Chiron\Container\Container;
-use Chiron\Core\Support\Security;
+use Chiron\Security\Security;
 use Chiron\Csrf\Config\CsrfConfig;
 use Chiron\Csrf\Exception\InvalidTokenException;
 use Chiron\Csrf\Exception\TokenMismatchException;

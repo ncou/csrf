@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Chiron\Csrf\Middleware;
 
-use Chiron\Config\SecurityConfig;
-use Chiron\Core\Support\Security;
+use Chiron\Security\Config\SecurityConfig;
+use Chiron\Security\Security;
 use Chiron\Csrf\Config\CsrfConfig;
 use Chiron\Csrf\Exception\InvalidTokenException;
 use Chiron\Http\Message\Cookie;

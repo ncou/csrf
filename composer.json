@@ -19,6 +19,7 @@
     },
     "require": {
         "php": "^7.2",
+        "chiron/security": "^1.0",
         "chiron/http-message-util": "^1.0",
         "chiron/http-exceptions": "^2.0"
     },
