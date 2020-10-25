@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Chiron\Csrf\Bootloader;
 
-use Chiron\Bootload\AbstractBootloader;
+use Chiron\Core\Container\Bootloader\AbstractBootloader;
 use Chiron\Csrf\Middleware\CsrfTokenMiddleware;
 use Chiron\Http\MiddlewareQueue;
 
