@@ -6,13 +6,13 @@ namespace Chiron\Csrf\Bootloader;
 
 use Chiron\Core\Container\Bootloader\AbstractBootloader;
 use Chiron\Csrf\Middleware\CsrfTokenMiddleware;
-use Chiron\Http\MiddlewareQueue;
+use Chiron\Http\Http;
 
 final class CsrfTokenMiddlewareBootloader extends AbstractBootloader
 {
-    public function boot(MiddlewareQueue $middlewares): void
+    public function boot(Http $http): void
     {
         // add the csrf token middleware AFTER the EncryptCookieMiddleware (defined with PRIORITY_MAX - 10).
-        $middlewares->addMiddleware(CsrfTokenMiddleware::class, MiddlewareQueue::PRIORITY_HIGH);
+        $http->addMiddleware(CsrfTokenMiddleware::class, Http::PRIORITY_HIGH);
     }
 }

@@ -13,13 +13,13 @@ use Chiron\Csrf\Exception\TokenMismatchException;
 use Chiron\Csrf\Middleware\CsrfProtectionMiddleware;
 use Chiron\Csrf\Middleware\CsrfTokenMiddleware;
 use Chiron\Http\Http;
-use Chiron\Http\MiddlewareQueue;
-use Chiron\Pipe\Decorator\RequestHandler\CallableRequestHandler;
+use Closure;
 use LogicException;
 use Nyholm\Psr7\Response;
 use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 class CsrfTest extends TestCase
 {
@@ -48,15 +48,14 @@ class CsrfTest extends TestCase
 
     public function testGet(): void
     {
-        $handler = new CallableRequestHandler(
-            static function ($r) {
+        $handler = static function (ServerRequestInterface $r) {
                 $response = new Response();
                 $response->getBody()->write($r->getAttribute(CsrfTokenMiddleware::ATTRIBUTE));
 
                 return $response;
-            }
-        );
-        $core = $this->httpCore([CsrfTokenMiddleware::class, $handler]);
+            };
+
+        $core = $this->httpCore([CsrfTokenMiddleware::class], $handler);
 
         $response = $this->get($core, '/');
         self::assertSame(200, $response->getStatusCode());
@@ -74,15 +73,14 @@ class CsrfTest extends TestCase
         $id = Security::generateId(CsrfTokenMiddleware::TOKEN_ID_LENGTH);
         $token = $id . hash_hmac(CsrfTokenMiddleware::HASH_FUNCTION_NAME, $id, $this->key);
 
-        $handler = new CallableRequestHandler(
-            static function ($r) {
+        $handler = static function (ServerRequestInterface $r) {
                 $response = new Response();
                 $response->getBody()->write($r->getAttribute(CsrfTokenMiddleware::ATTRIBUTE));
 
                 return $response;
-            }
-        );
-        $core = $this->httpCore([CsrfTokenMiddleware::class, $handler]);
+            };
+
+        $core = $this->httpCore([CsrfTokenMiddleware::class], $handler);
 
         $response = $this->get($core, '/', [], [], ['csrf-token' => $token]);
         self::assertSame(200, $response->getStatusCode());
@@ -93,15 +91,14 @@ class CsrfTest extends TestCase
 
     public function testGetWithBadCookieToken(): void
     {
-        $handler = new CallableRequestHandler(
-            static function ($r) {
+        $handler = static function (ServerRequestInterface $r) {
                 $response = new Response();
                 $response->getBody()->write($r->getAttribute(CsrfTokenMiddleware::ATTRIBUTE));
 
                 return $response;
-            }
-        );
-        $core = $this->httpCore([CsrfTokenMiddleware::class, $handler]);
+            };
+
+        $core = $this->httpCore([CsrfTokenMiddleware::class], $handler);
 
         $this->expectException(InvalidTokenException::class);
         $this->expectExceptionMessage('Request to the specified resource has been aborted because CSRF token is invalid.');
@@ -114,15 +111,14 @@ class CsrfTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('Unable to apply CSRF protection, attribute is missing or invalid.');
 
-        $handler = new CallableRequestHandler(
-            static function ($r) {
+        $handler = static function (ServerRequestInterface $r) {
                 $response = new Response();
                 $response->getBody()->write('all good');
 
                 return $response;
-            }
-        );
-        $core = $this->httpCore([CsrfProtectionMiddleware::class, $handler]);
+            };
+
+        $core = $this->httpCore([CsrfProtectionMiddleware::class], $handler);
 
         $response = $this->post($core, '/');
     }
@@ -132,30 +128,28 @@ class CsrfTest extends TestCase
         $this->expectException(TokenMismatchException::class);
         $this->expectExceptionMessage('Access to the specified resource has been forbidden because CSRF verification failed.');
 
-        $handler = new CallableRequestHandler(
-            static function ($r) {
+        $handler = static function (ServerRequestInterface $r) {
                 $response = new Response();
                 $response->getBody()->write('all good');
 
                 return $response;
-            }
-        );
-        $core = $this->httpCore([CsrfTokenMiddleware::class, CsrfProtectionMiddleware::class, $handler]);
+            };
+
+        $core = $this->httpCore([CsrfTokenMiddleware::class, CsrfProtectionMiddleware::class], $handler);
 
         $response = $this->post($core, '/');
     }
 
     public function testPostOK(): void
     {
-        $handler = new CallableRequestHandler(
-            static function ($r) {
+        $handler = static function (ServerRequestInterface $r) {
                 $response = new Response();
                 $response->getBody()->write('all good');
 
                 return $response;
-            }
-        );
-        $core = $this->httpCore([CsrfTokenMiddleware::class, CsrfProtectionMiddleware::class, $handler]);
+            };
+
+        $core = $this->httpCore([CsrfTokenMiddleware::class, CsrfProtectionMiddleware::class], $handler);
 
         $response = $this->get($core, '/');
         self::assertSame(200, $response->getStatusCode());
@@ -182,15 +176,14 @@ class CsrfTest extends TestCase
 
     public function testHeaderOK(): void
     {
-        $handler = new CallableRequestHandler(
-            static function ($r) {
+        $handler = static function (ServerRequestInterface $r) {
                 $response = new Response();
                 $response->getBody()->write('all good');
 
                 return $response;
-            }
-        );
-        $core = $this->httpCore([CsrfTokenMiddleware::class, CsrfProtectionMiddleware::class, $handler]);
+            };
+
+        $core = $this->httpCore([CsrfTokenMiddleware::class, CsrfProtectionMiddleware::class], $handler);
 
         $response = $this->get($core, '/');
         self::assertSame(200, $response->getStatusCode());
@@ -215,18 +208,17 @@ class CsrfTest extends TestCase
         self::assertSame('all good', (string) $response->getBody());
     }
 
-    protected function httpCore(array $middlewares = []): Http
+    protected function httpCore(array $middlewares = [], Closure $handler): Http
     {
-        $queue = new MiddlewareQueue($this->container);
+        $http = new Http($this->container);
 
         foreach ($middlewares as $middleware) {
-            $queue->addMiddleware($middleware);
+            $http->addMiddleware($middleware);
         }
 
-        return new Http(
-            $this->container,
-            $queue
-        );
+        $http->setHandler($handler);
+
+        return $http;
     }
 
     protected function get(
