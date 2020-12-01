@@ -12,6 +12,9 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
+//https://docs.djangoproject.com/en/1.8/ref/csrf/
+//https://api.rubyonrails.org/classes/ActionController/RequestForgeryProtection.html
+
 // Helper methodes =>
 //https://codeigniter4.github.io/userguide/libraries/security.html#id2
 //https://github.com/codeigniter4/CodeIgniter4/blob/7c55d73abfb206b5ed3e0dd52cea2ad6c1134975/system/Common.php#L260
@@ -22,7 +25,8 @@ use Psr\Http\Server\RequestHandlerInterface;
 // TODO : créer une méthode [__constructor(?array $methods = null)] ou [__constructor(array $methods = self::NOT_SAFE_METHODS)] qui prendrait un array avec les request methodes à vérifier, si la valeur est nulle par défaut on utilisera le tableau self::NOT_SAFE_METHODS, cela permet de customiser le middleware. et on pourra utiliser une constante ANY si besoin (ex : new CsrfProtectionMiddleware(Method::ANY)) pour activer la protection sur les méthodes safe et unsafe à la fois.
 
 /**
- * Provides generic CSRF protection using cookie as token storage. Set "csrfToken" attribute to request.
+ * Provides generic CSRF protection using "Double Submit Cookie" approach.
+ * An antiforgery token is required for HTTP methods other than GET, HEAD, OPTIONS, and TRACE.
  *
  * @see https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#double-submit-cookie
  */
@@ -39,21 +43,15 @@ final class CsrfProtectionMiddleware implements MiddlewareInterface
     public const PARAMETER = 'csrf-token';
 
     /**
-     * Methods who needs protection agains CSRF (should have a CSRF token attached to the request).
-     */
-    public const NOT_SAFE_METHODS = [Method::POST, Method::PUT, Method::PATCH, Method::DELETE];
-
-    /**
      * {@inheritdoc}
      *
-     * @throws TokenMismatchException An http 403 Forbidden exception.
+     * @throws TokenMismatchException An http 412 Precondition Failed exception.
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $token = $this->getToken($request);
-
-        if ($this->isTokenRequired($request) && ! hash_equals($token, $this->fetchToken($request))) {
-            // Throw an Http 403 Forbidden exception.
+        // Verify CSRF token if the request method is considered "unsafe".
+        if ($this->needsProtection($request) && ! $this->tokensMatch($request)) {
+            // Throw an http error 412 "pre-condition failed" exception.
             throw new TokenMismatchException();
         }
 
@@ -61,8 +59,35 @@ final class CsrfProtectionMiddleware implements MiddlewareInterface
     }
 
     /**
+     * Assume that anything not defined as 'safe' by RFC7231 needs protection.
+     *
+     * @param ServerRequestInterface $request
+     *
+     * @return bool
+     */
+    private function needsProtection(ServerRequestInterface $request): bool
+    {
+        return Method::isSafe($request->getMethod()) === false;
+    }
+
+    /**
+     * Check if the csrf token from the user request match the expected token.
+     *
+     * @param ServerRequestInterface $request
+     *
+     * @return bool
+     */
+    private function tokensMatch(ServerRequestInterface $request): bool
+    {
+        $expectedToken = $this->getToken($request);
+        $providedToken = $this->getTokenFromRequest($request);
+
+        return hash_equals($expectedToken, $providedToken);
+    }
+
+    /**
      * Retrieve the token value present in the request attribute.
-     * Data come from the previous middleware "CsrfTokenMiddleware".
+     * Token come from the previous middleware "CsrfTokenMiddleware".
      *
      * @param ServerRequestInterface $request
      *
@@ -72,44 +97,32 @@ final class CsrfProtectionMiddleware implements MiddlewareInterface
     {
         $token = $request->getAttribute(CsrfTokenMiddleware::ATTRIBUTE);
 
+        // TODO : il faudrait pas vérifier qu'il fait bien la taille attendue ??? style créer une méthode isValidToken( qui fait la vérif suivante) :    is_string($token) && ctype_alnum($token) && strlen($token) === CsrfTokenMiddleware::TOKEN_LENGTH;
         if (! $token || ! is_string($token)) {
-            throw new LogicException('Unable to apply CSRF protection, attribute is missing or invalid.');
+            throw new LogicException('Unable to prepare CSRF protection, token attribute is missing or invalid.');
         }
 
         return $token;
     }
 
     /**
-     * Check if middleware should validate csrf token.
-     *
-     * @param ServerRequestInterface $request
-     *
-     * @return bool
-     */
-    private function isTokenRequired(ServerRequestInterface $request): bool
-    {
-        return in_array(strtoupper($request->getMethod()), self::NOT_SAFE_METHODS);
-    }
-
-    /**
-     * Fetch token from request.
+     * Fetch user token from the request (via header or body).
      *
      * @param ServerRequestInterface $request
      *
      * @return string
      */
-    private function fetchToken(ServerRequestInterface $request): string
+    // TODO : appeller la méthode isValidToken() pour vérifier qui la valeur est bien une string+alnum+de taille 40 caractéres ??? EDIT : cet appel ne me semble pas nécessaire car va surement allourdir le code !!!
+    private function getTokenFromRequest(ServerRequestInterface $request): string
     {
         if ($request->hasHeader(self::HEADER)) {
-            $headers = $request->getHeader(self::HEADER);
-
-            return reset($headers); // TODO : attention la méthode reset() peut renvoyer false !!!! donc le typehint de cette méthode n'est pas correct !!!!
+            return (string) $request->getHeaderLine(self::HEADER);
         }
 
-        $data = $request->getParsedBody();
+        $body = $request->getParsedBody();
 
-        if (is_array($data) && isset($data[self::PARAMETER]) && is_string($data[self::PARAMETER])) {
-            return $data[self::PARAMETER];
+        if (is_array($body) && isset($body[self::PARAMETER]) && is_string($body[self::PARAMETER])) {
+            return $body[self::PARAMETER];
         }
 
         return '';

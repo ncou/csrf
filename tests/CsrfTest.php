@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace Chiron\Csrf\Tests;
 
-use Chiron\Security\Config\SecurityConfig;
 use Chiron\Container\Container;
-use Chiron\Security\Security;
 use Chiron\Csrf\Config\CsrfConfig;
-use Chiron\Csrf\Exception\InvalidTokenException;
 use Chiron\Csrf\Exception\TokenMismatchException;
 use Chiron\Csrf\Middleware\CsrfProtectionMiddleware;
 use Chiron\Csrf\Middleware\CsrfTokenMiddleware;
 use Chiron\Http\Http;
+use Chiron\Security\Config\SecurityConfig;
+use Chiron\Security\Security;
 use Closure;
 use LogicException;
 use Nyholm\Psr7\Response;
@@ -24,6 +23,7 @@ use Psr\Http\Message\ServerRequestInterface;
 class CsrfTest extends TestCase
 {
     private $container;
+    private $rawKey;
     private $key;
 
     public function setUp(): void
@@ -31,7 +31,8 @@ class CsrfTest extends TestCase
         $this->container = new Container();
         $this->container->setAsGlobal();
 
-        $this->key = bin2hex(random_bytes(32));
+        $this->rawKey = random_bytes(32);
+        $this->key = bin2hex($this->rawKey);
 
         $securityConfig = new SecurityConfig([
             'key' => $this->key,
@@ -46,14 +47,14 @@ class CsrfTest extends TestCase
         $this->container->bind(CsrfConfig::class, $csrfConfig);
     }
 
-    public function testGet(): void
+    public function testGetWithoutCookieToken(): void
     {
         $handler = static function (ServerRequestInterface $r) {
                 $response = new Response();
                 $response->getBody()->write($r->getAttribute(CsrfTokenMiddleware::ATTRIBUTE));
 
                 return $response;
-            };
+        };
 
         $core = $this->httpCore([CsrfTokenMiddleware::class], $handler);
 
@@ -63,29 +64,10 @@ class CsrfTest extends TestCase
         self::assertTrue($response->hasHeader('Set-Cookie'));
 
         $cookies = $this->fetchCookies($response);
+        $signedToken = $cookies['csrf-token'];
+        $token = Security::unsign($signedToken, $this->rawKey);
 
         self::assertArrayHasKey('csrf-token', $cookies);
-        self::assertSame($cookies['csrf-token'], (string) $response->getBody());
-    }
-
-    public function testGetWithGoodCookieToken(): void
-    {
-        $id = Security::generateId(CsrfTokenMiddleware::TOKEN_ID_LENGTH);
-        $token = $id . hash_hmac(CsrfTokenMiddleware::HASH_FUNCTION_NAME, $id, $this->key);
-
-        $handler = static function (ServerRequestInterface $r) {
-                $response = new Response();
-                $response->getBody()->write($r->getAttribute(CsrfTokenMiddleware::ATTRIBUTE));
-
-                return $response;
-            };
-
-        $core = $this->httpCore([CsrfTokenMiddleware::class], $handler);
-
-        $response = $this->get($core, '/', [], [], ['csrf-token' => $token]);
-        self::assertSame(200, $response->getStatusCode());
-        // Cookie csrf-token should NOT be presents in the response, if the request has a valid csrf-token cookie.
-        self::assertFalse($response->hasHeader('Set-Cookie'));
         self::assertSame($token, (string) $response->getBody());
     }
 
@@ -96,27 +78,56 @@ class CsrfTest extends TestCase
                 $response->getBody()->write($r->getAttribute(CsrfTokenMiddleware::ATTRIBUTE));
 
                 return $response;
-            };
+        };
 
         $core = $this->httpCore([CsrfTokenMiddleware::class], $handler);
 
-        $this->expectException(InvalidTokenException::class);
-        $this->expectExceptionMessage('Request to the specified resource has been aborted because CSRF token is invalid.');
-
         $response = $this->get($core, '/', [], [], ['csrf-token' => 'not_valid_token']);
+
+        self::assertSame(200, $response->getStatusCode());
+        // Cookie csrf-token should be presents in the response, if the request has not csrf-token cookie.
+        self::assertTrue($response->hasHeader('Set-Cookie'));
+
+        $cookies = $this->fetchCookies($response);
+        $signedToken = $cookies['csrf-token'];
+        $token = Security::unsign($signedToken, $this->rawKey);
+
+        self::assertArrayHasKey('csrf-token', $cookies);
+        self::assertSame($token, (string) $response->getBody());
+    }
+
+    public function testGetWithGoodCookieToken(): void
+    {
+        $id = Security::generateId(CsrfTokenMiddleware::TOKEN_LENGTH);
+        $token = Security::sign($id, $this->rawKey);
+
+        $handler = static function (ServerRequestInterface $r) {
+                $response = new Response();
+                $response->getBody()->write($r->getAttribute(CsrfTokenMiddleware::ATTRIBUTE));
+
+                return $response;
+        };
+
+        $core = $this->httpCore([CsrfTokenMiddleware::class], $handler);
+
+        $response = $this->get($core, '/', [], [], ['csrf-token' => $token]);
+        self::assertSame(200, $response->getStatusCode());
+        // Cookie csrf-token should NOT be presents in the response, if the request has a valid csrf-token cookie.
+        self::assertFalse($response->hasHeader('Set-Cookie'));
+        self::assertSame(Security::unsign($token, $this->rawKey), (string) $response->getBody());
     }
 
     public function testLogicException(): void
     {
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('Unable to apply CSRF protection, attribute is missing or invalid.');
+        $this->expectExceptionMessage('Unable to prepare CSRF protection, token attribute is missing or invalid.');
 
         $handler = static function (ServerRequestInterface $r) {
                 $response = new Response();
                 $response->getBody()->write('all good');
 
                 return $response;
-            };
+        };
 
         $core = $this->httpCore([CsrfProtectionMiddleware::class], $handler);
 
@@ -126,14 +137,14 @@ class CsrfTest extends TestCase
     public function testPostForbidden(): void
     {
         $this->expectException(TokenMismatchException::class);
-        $this->expectExceptionMessage('Access to the specified resource has been forbidden because CSRF verification failed.');
+        $this->expectExceptionMessage('Cannot access the specified resource because CSRF verification failed.');
 
         $handler = static function (ServerRequestInterface $r) {
                 $response = new Response();
                 $response->getBody()->write('all good');
 
                 return $response;
-            };
+        };
 
         $core = $this->httpCore([CsrfTokenMiddleware::class, CsrfProtectionMiddleware::class], $handler);
 
@@ -147,7 +158,7 @@ class CsrfTest extends TestCase
                 $response->getBody()->write('all good');
 
                 return $response;
-            };
+        };
 
         $core = $this->httpCore([CsrfTokenMiddleware::class, CsrfProtectionMiddleware::class], $handler);
 
@@ -156,17 +167,21 @@ class CsrfTest extends TestCase
         self::assertSame('all good', (string) $response->getBody());
 
         $cookies = $this->fetchCookies($response);
+        $signedToken = $cookies['csrf-token'];
+        $token = Security::unsign($signedToken, $this->rawKey);
+
+        //die(var_dump($token));
 
         // use the good token (from the get cookie response) in the post request BODY/HEADER
         $response = $this->post(
             $core,
             '/',
             [
-                'csrf-token' => $cookies['csrf-token'],
+                'csrf-token' => $token,
             ],
             [],
             [
-                'csrf-token' => $cookies['csrf-token'],
+                'csrf-token' => $signedToken,
             ]
         );
 
@@ -181,7 +196,7 @@ class CsrfTest extends TestCase
                 $response->getBody()->write('all good');
 
                 return $response;
-            };
+        };
 
         $core = $this->httpCore([CsrfTokenMiddleware::class, CsrfProtectionMiddleware::class], $handler);
 
@@ -190,6 +205,8 @@ class CsrfTest extends TestCase
         self::assertSame('all good', (string) $response->getBody());
 
         $cookies = $this->fetchCookies($response);
+        $signedToken = $cookies['csrf-token'];
+        $token = Security::unsign($signedToken, $this->rawKey);
 
         // use the good token (from the get cookie response) in the post request BODY/HEADER
         $response = $this->post(
@@ -197,10 +214,10 @@ class CsrfTest extends TestCase
             '/',
             [],
             [
-                'X-CSRF-Token' => $cookies['csrf-token'],
+                'X-CSRF-Token' => $token,
             ],
             [
-                'csrf-token' => $cookies['csrf-token'],
+                'csrf-token' => $signedToken,
             ]
         );
 

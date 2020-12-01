@@ -27,7 +27,7 @@ final class CsrfConfig extends AbstractInjectableConfig
         // TODO : ajouter un controle pour que le lifetime soit supérieur ou égal à 0 (et dans ce cas le cookie est valable durant la durée de la session).
         return Expect::structure([
             'cookie'   => Expect::string()->default('csrf-token'),
-            'length'   => Expect::int()->default(16),
+            'length'   => Expect::int()->default(16), // TODO : à virer !!!!
             'lifetime' => Expect::int()->default(86400),
         ]);
 
