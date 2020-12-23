@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Chiron\Csrf\Middleware;
 
-use Chiron\Csrf\Config\CsrfConfig;
 use Chiron\Cookies\Cookie;
-use Chiron\Security\Config\SecurityConfig;
-use Chiron\Security\Security;
+use Chiron\Cookies\CookieFactory;
+use Chiron\Csrf\Config\CsrfConfig;
+use Chiron\Security\Exception\BadSignatureException;
+use Chiron\Security\Signer;
+use Chiron\Security\Support\Random;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -35,106 +37,117 @@ final class CsrfTokenMiddleware implements MiddlewareInterface
     /**
      * Request attribute name used to store the token value used later.
      */
-    public const ATTRIBUTE = 'csrfToken';
+    public const ATTRIBUTE = 'csrfToken'; // TODO : utiliser la valeur '__csrfToken__' ???
 
     /**
      * Length of the token.
      */
     public const TOKEN_LENGTH = 40;
 
-    /** @var string */
-    private $secretKey;
-
     /** @var CsrfConfig */
     private $csrfConfig;
 
+    /** @var CookieFactory */
+    private $cookieFactory;
+
+    /** @var Signer */
+    private $signer;
+
     /**
-     * @param SecurityConfig $securityConfig
-     * @param CsrfConfig     $csrfConfig
+     * @param CsrfConfig    $csrfConfig
+     * @param CookieFactory $cookieFactory
+     * @param Signer        $signer
      */
-    // TODO : utiliser le champ length pour paramétrer la longeur du token_id qui sera utilisé !!!
-    public function __construct(SecurityConfig $securityConfig, CsrfConfig $csrfConfig) // TODO : ajouter le httpConfig et stocker dans une variable de classe le $this->basePath
+    public function __construct(CsrfConfig $csrfConfig, CookieFactory $cookieFactory, Signer $signer)
     {
-        // Secret key (32 bytes) will be used to sign the token.
-        $this->secretKey = $securityConfig->getRawKey();
         $this->csrfConfig = $csrfConfig;
+        $this->cookieFactory = $cookieFactory;
+        // Use the class name as salt to have a different signatures in different application module.
+        $this->signer = $signer->withSalt(self::class);
     }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        // Try to retrieve an existing token from the cookie request.
-        $token = $this->getTokenFromCookie($request);
-
-        // If it doesn't exist, prepare a csrf token and the cookie to store it.
-        if ($token === null) {
-            $token = $this->generateToken();
-            $cookie = $this->prepareCookie($token);
-        }
+        // Retrieve an existing token from the cookie or generate a new one.
+        $token = $this->prepareToken($request);
 
         // CSRF issues must be handled by the CsrfProtection middleware.
         $response = $handler->handle($request->withAttribute(static::ATTRIBUTE, $token));
-        // Attach the token cookie for the "futur" request call.
-        if (isset($cookie)) {
-            $response = $response->withAddedHeader('Set-Cookie', $cookie->toHeaderValue());
+
+        // Attach/Refresh the token cookie for the "next" request call.
+        $cookie = $this->createCookie($token);
+
+        return $response->withAddedHeader('Set-Cookie', (string) $cookie); // TODO : créer une méthode return $this->withCsrfTokenCookie($response, $token):ResponseInterface qui se charge d'attacher le cookie à la réponse et à retourner le nouvel objet $response actualisé.
+    }
+
+    /**
+     * Return the token found in the cookie, or generate a new one.
+     *
+     * @param ServerRequestInterface $request
+     *
+     * @return string
+     */
+    private function prepareToken(ServerRequestInterface $request): string
+    {
+        // Try to retrieve an existing token from the cookie request.
+        $token = $this->getTokenFromCookie($request->getCookieParams());
+
+        // If token isn't present in the cookie, we generate a new token.
+        if ($token === null) {
+            $token = $this->generateToken();
         }
 
-        return $response;
+        return $token;
     }
 
     /**
      * Get the token from the request cookie if it's present.
-     * Unsign the cookie token value using the secret key.
-     * Return null if the cookie is missing or if the cookie value is not a string or if the unsign fail.
+     * Unsign the cookie token value using the app secret key.
      *
-     * @param string $token The CSRF token.
+     * Return null if the cookie is missing or if the unsign fail.
+     *
+     * @param array $cookies
      *
      * @return string|null
      */
-    private function getTokenFromCookie(ServerRequestInterface $request): ?string
+    private function getTokenFromCookie(array $cookies): ?string
     {
-        $cookieName = $this->csrfConfig->getCookie();
-        $token = $request->getCookieParams()[$cookieName] ?? null;
+        $name = $this->csrfConfig->getCookieName();
+        $value = $cookies[$name] ?? '';
 
-        // TODO : code pas très beau !!! à améliorer.
-        if (! is_string($token)) {
+        try {
+            return $this->signer->unsign($value);
+        } catch (BadSignatureException $e) {
+            // Don't blow up the middleware if the signature is invalid.
             return null;
         }
-
-        return Security::unsign($token, $this->secretKey) ?: null;
     }
 
     /**
-     * Generate a token to be used for CSRF protection.
+     * Generate a random id used as token for CSRF protection.
      *
      * @return string
      */
     private function generateToken(): string
     {
-        return Security::generateId(self::TOKEN_LENGTH);
+        return Random::alphanum(self::TOKEN_LENGTH);
     }
 
     /**
-     * Create CSRF cookie with the signed token value.
+     * Create CSRF cookie to store the signed token value.
+     *
+     * Sign the value for better security (in case of XSS attack).
      *
      * @param string $token
      *
      * @return Cookie
      */
-    private function prepareCookie(string $token): Cookie
+    private function createCookie(string $token): Cookie
     {
-        // TODO : core à améliorer, éventuellement mettre une ligne de code pour récupérer le $name, une autre ligne pour le signed Token dans une variable $value, et une pour les $options et une derniére ligne avec un return Cookie::create($name, $value, $options);
-        $cookie = Cookie::create(
-            $this->csrfConfig->getCookie(),
-            Security::sign($token, $this->secretKey),
-            [
-                'expires'  => time() + $this->csrfConfig->getCookieLifetime(),
-                //'path' => null, //'path' => $request->getAttribute('webroot'), // https://github.com/cakephp/cakephp/blob/master/src/Http/Middleware/CsrfProtectionMiddleware.php#L331
-                'secure'   => $this->csrfConfig->isCookieSecure(),
-                'samesite' => $this->csrfConfig->getSameSite(),
-                'httponly' => true,
-            ]
-        );
+        $name = $this->csrfConfig->getCookieName();
+        $value = $this->signer->sign($token);
+        $expires = time() + $this->csrfConfig->getCookieAge();
 
-        return $cookie;
+        return $this->cookieFactory->create($name, $value, $expires);
     }
 }

@@ -29,18 +29,19 @@ use Psr\Http\Server\RequestHandlerInterface;
  * An antiforgery token is required for HTTP methods other than GET, HEAD, OPTIONS, and TRACE.
  *
  * @see https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#double-submit-cookie
+ * @see https://tools.ietf.org/html/rfc7231#section-4.2.1
  */
 final class CsrfProtectionMiddleware implements MiddlewareInterface
 {
     /**
      * Header to check for token instead of POST/GET data.
      */
-    public const HEADER = 'X-CSRF-Token';
+    public const HEADER = 'X-CSRF-Token'; // TODO : paramétrer ces valeurs dans le fichier csrf.php avec un champ headerName/fieldName ????
 
     /**
      * Parameter name used to represent client token in POST data.
      */
-    public const PARAMETER = 'csrf-token';
+    public const PARAMETER = 'csrf-token'; // TODO : paramétrer ces valeurs dans le fichier csrf.php avec un champ headerName/fieldName ???? Attention vérifier si ce champ n'est pas utilisé dans la méthode csrf_token ou dans le twig extension, car si on enléve le format de constante public on devra récupérer l'objet csrfConfig et ca peut vite complexifier le code !!!!
 
     /**
      * {@inheritdoc}
@@ -49,7 +50,7 @@ final class CsrfProtectionMiddleware implements MiddlewareInterface
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        // Verify CSRF token if the request method is considered "unsafe".
+        // Verify token if the request method is "unsafe" and require protection.
         if ($this->needsProtection($request) && ! $this->tokensMatch($request)) {
             // Throw an http error 412 "pre-condition failed" exception.
             throw new TokenMismatchException();
@@ -59,7 +60,9 @@ final class CsrfProtectionMiddleware implements MiddlewareInterface
     }
 
     /**
-     * Assume that anything not defined as 'safe' by RFC7231 needs protection.
+     * Assume that any method not defined as 'safe' by RFC7231 needs protection.
+     *
+     * @see https://tools.ietf.org/html/rfc7231#section-4.2.1
      *
      * @param ServerRequestInterface $request
      *
@@ -67,7 +70,7 @@ final class CsrfProtectionMiddleware implements MiddlewareInterface
      */
     private function needsProtection(ServerRequestInterface $request): bool
     {
-        return Method::isSafe($request->getMethod()) === false;
+        return Method::isSafe($request->getMethod()) === false; // Permettre de passer aux méthodes isSafe/isUnsafe soit une string pour la méthode soit directement un objet ServerRequestInterface pour récupérer la méthode via un appel ->getMethod() et ensuite faire la vérification. Ca simplifierai les choses non ????
     }
 
     /**
@@ -79,30 +82,30 @@ final class CsrfProtectionMiddleware implements MiddlewareInterface
      */
     private function tokensMatch(ServerRequestInterface $request): bool
     {
-        $expectedToken = $this->getToken($request);
-        $providedToken = $this->getTokenFromRequest($request);
+        $expected = $this->fetchToken($request);
+        $provided = $this->getTokenFromRequest($request);
 
-        return hash_equals($expectedToken, $providedToken);
+        return hash_equals($expected, $provided);
     }
 
     /**
-     * Retrieve the token value present in the request attribute.
+     * Fetch the token value present in the request attribute.
      * Token come from the previous middleware "CsrfTokenMiddleware".
      *
      * @param ServerRequestInterface $request
      *
      * @return string
      */
-    private function getToken(ServerRequestInterface $request): string
+    private function fetchToken(ServerRequestInterface $request): string
     {
         $token = $request->getAttribute(CsrfTokenMiddleware::ATTRIBUTE);
 
-        // TODO : il faudrait pas vérifier qu'il fait bien la taille attendue ??? style créer une méthode isValidToken( qui fait la vérif suivante) :    is_string($token) && ctype_alnum($token) && strlen($token) === CsrfTokenMiddleware::TOKEN_LENGTH;
-        if (! $token || ! is_string($token)) {
-            throw new LogicException('Unable to prepare CSRF protection, token attribute is missing or invalid.');
+        // Ensure the token stored previously by the CsrfTokenMiddleware is present and has a valid format.
+        if (is_string($token) && ctype_alnum($token) && strlen($token) === CsrfTokenMiddleware::TOKEN_LENGTH) {
+            return $token;
         }
 
-        return $token;
+        throw new LogicException('Unable to prepare CSRF protection, token attribute is missing or invalid.');
     }
 
     /**
@@ -112,19 +115,24 @@ final class CsrfProtectionMiddleware implements MiddlewareInterface
      *
      * @return string
      */
-    // TODO : appeller la méthode isValidToken() pour vérifier qui la valeur est bien une string+alnum+de taille 40 caractéres ??? EDIT : cet appel ne me semble pas nécessaire car va surement allourdir le code !!!
+    // TODO : vérifier si la méthode de la request est POST dans ce cas vérifier dans le body, si le token n'est pas trouvé alors regarder dans le header.
+    // https://github.com/django/django/blob/master/django/middleware/csrf.py#L295
+    // TODO : rendre ce code plus propre ????
     private function getTokenFromRequest(ServerRequestInterface $request): string
     {
+        //$provided = $request->getParsedBody()['csrfToken'] ?? $request->getHeaderLine('X-CSRF-Token');
+
         if ($request->hasHeader(self::HEADER)) {
-            return (string) $request->getHeaderLine(self::HEADER);
+            return (string) $request->getHeaderLine(self::HEADER); // TODO : attention ca va pas poser un soucis si il y a plusieurs headers ??? on va surement avoir une string avec un ";" comme séparateur !!!!
         }
 
+        // Handle the case for a POST form.
         $body = $request->getParsedBody();
-
         if (is_array($body) && isset($body[self::PARAMETER]) && is_string($body[self::PARAMETER])) {
             return $body[self::PARAMETER];
         }
 
-        return '';
+        // TODO : initialiser plutot en début de méthode une variable $token = '' et ensuite la remplir soit avec le header soit avec le body (donc virer les 2 return) et finir par un return $token; en fin de méthode.
+        return ''; // TODO : créer une constante privé style self::EMPTY_TOKEN qui serait une chaine vide ????
     }
 }

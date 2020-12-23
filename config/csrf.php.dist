@@ -1,7 +1,34 @@
 <?php
 
 return [
-    'cookie'   => 'csrf-token',
-    'length'   => 16,
-    'lifetime' => 86400,
+    /*
+    |--------------------------------------------------------------------------
+    | CSRF Cookie Name
+    |--------------------------------------------------------------------------
+    | Default: 'csrf-token'
+    |
+    | The name of the cookie to use for the CSRF authentication token.
+    |
+    | This can be whatever you want (as long as it’s not empty and different
+    | from the other cookie names in your application).
+    |
+    | Use any US-ASCII characters, except control characters, spaces, or tabs.
+    | It also must not contain a separator character like the following:
+    | ( ) < > @ , ; : \ " / [ ] ? = { }
+    */
+    'cookie_name' => 'csrf-token',
+    /*
+    |--------------------------------------------------------------------------
+    | CSRF Cookie Lifetime
+    |--------------------------------------------------------------------------
+    | Default: 31449600 (approximately 1 year, in seconds)
+    |
+    | The age of CSRF cookies, in seconds (minimal value: 0).
+    |
+    | The reason for setting a long-lived expiration time is to avoid
+    | problems in the case of a user closing a browser or bookmarking a page
+    | and then loading that page from a browser cache.
+    | Without persistent cookies, the form submission would fail in this case.
+    */
+    'cookie_age' => 31449600,
 ];

@@ -41,7 +41,7 @@
     "extra": {
         "chiron": {
             "bootloaders": [
-                "Chiron\\Csrf\\Bootloader\\PublishMaintenanceBootloader",
+                "Chiron\\Csrf\\Bootloader\\PublishCsrfBootloader",
                 "Chiron\\Csrf\\Bootloader\\CsrfTokenMiddlewareBootloader"
             ]
       }
