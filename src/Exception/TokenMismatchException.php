@@ -9,7 +9,7 @@ use Chiron\Http\Exception\Client\PreconditionFailedHttpException;
 /**
  * Represents an HTTP 412 error caused by a mismatched CSRF token
  */
-class TokenMismatchException extends PreconditionFailedHttpException
+final class TokenMismatchException extends PreconditionFailedHttpException
 {
     /**
      * Constructor
