@@ -70,7 +70,7 @@ final class CsrfProtectionMiddleware implements MiddlewareInterface
      */
     private function needsProtection(ServerRequestInterface $request): bool
     {
-        return Method::isSafe($request->getMethod()) === false; // Permettre de passer aux méthodes isSafe/isUnsafe soit une string pour la méthode soit directement un objet ServerRequestInterface pour récupérer la méthode via un appel ->getMethod() et ensuite faire la vérification. Ca simplifierai les choses non ????
+        return Method::isSafe($request->getMethod()) === false;
     }
 
     /**
