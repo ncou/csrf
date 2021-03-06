@@ -33,10 +33,7 @@
     },
     "scripts": {
         "phpunit": "phpunit --colors=always",
-        "test-coverage": [
-            "@putenv XDEBUG_MODE=coverage",
-            "phpunit --coverage-clover clover.xml"
-        ],
+        "test-coverage": "phpunit --coverage-clover clover.xml",
         "phpstan": "phpstan analyse --ansi",
         "check-style": "phpcs src tests",
         "fix-style": "phpcbf src tests"

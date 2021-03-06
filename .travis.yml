@@ -8,6 +8,10 @@ php:
     - 7.3
     - 7.4
 
+env:
+  global:
+    - XDEBUG_MODE=coverage
+
 matrix:
     fast_finish: true
     include:
@@ -24,7 +28,7 @@ before_script:
 
 after_script:
     # Submit coverage report to Coveralls servers, see .coveralls.yml
-    - travis_retry php vendor/bin/php-coveralls -v
+    - travis_retry php vendor/bin/coveralls -v
     # Submit coverage report to codecov.io
     - bash <(curl -s https://codecov.io/bash)
 
