@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace Chiron\Csrf\Middleware;
 
+use Chiron\Csrf\Config\CsrfConfig;
+use Chiron\Csrf\Exception\BadOriginException;
+use Chiron\Csrf\Exception\UntrustedOriginException;
+use Chiron\Http\Helper\Uri;
+use Chiron\Http\Message\RequestMethod as Method;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Chiron\Http\Message\RequestMethod as Method;
-use Chiron\Http\Helper\Uri;
-use Chiron\Csrf\Config\CsrfConfig;
-use Chiron\Csrf\Exception\UntrustedOriginException;
-use Chiron\Csrf\Exception\BadOriginException;
-
 
 //https://github.com/Pylons/pyramid/blob/ee7ca28cc51cf40d1190144834704e287c9fc72d/src/pyramid/csrf.py#L248
 //https://github.com/django/django/blob/5fcfe5361e5b8c9738b1ee4c1e9a6f293a7dda40/django/middleware/csrf.py#L224
@@ -45,29 +44,29 @@ final class CsrfOriginProtectionMiddleware implements MiddlewareInterface
     private $csrfConfig;
 
     /**
-     * @param HttpConfig $httpConfig
-     * @param SettingsConfig   $settingsConfig
+     * @param HttpConfig     $httpConfig
+     * @param SettingsConfig $settingsConfig
      */
     public function __construct(CsrfConfig $csrfConfig)
     {
         $this->csrfConfig = $csrfConfig;
     }
 
-    # Suppose user visits http://example.com/
-    # An active network attacker (man-in-the-middle, MITM) sends a
-    # POST form that targets https://example.com/detonate-bomb/ and
-    # submits it via JavaScript.
-    #
-    # The attacker will need to provide a CSRF cookie and token, but
-    # that's no problem for a MITM when we cannot make any assumptions
-    # about what kind of session storage is being used. So the MITM can
-    # circumvent the CSRF protection. This is true for any HTTP connection,
-    # but anyone using HTTPS expects better! For this reason, for
-    # https://example.com/ we need additional protection that treats
-    # http://example.com/ as completely untrusted. Under HTTPS,
-    # Barth et al. found that the Referer header is missing for
-    # same-domain requests in only about 0.2% of cases or less, so
-    # we can use strict Referer checking.
+    // Suppose user visits http://example.com/
+    // An active network attacker (man-in-the-middle, MITM) sends a
+    // POST form that targets https://example.com/detonate-bomb/ and
+    // submits it via JavaScript.
+    //
+    // The attacker will need to provide a CSRF cookie and token, but
+    // that's no problem for a MITM when we cannot make any assumptions
+    // about what kind of session storage is being used. So the MITM can
+    // circumvent the CSRF protection. This is true for any HTTP connection,
+    // but anyone using HTTPS expects better! For this reason, for
+    // https://example.com/ we need additional protection that treats
+    // http://example.com/ as completely untrusted. Under HTTPS,
+    // Barth et al. found that the Referer header is missing for
+    // same-domain requests in only about 0.2% of cases or less, so
+    // we can use strict Referer checking.
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         // Origin checks are only trustworthy on HTTPS requests.
@@ -114,7 +113,6 @@ final class CsrfOriginProtectionMiddleware implements MiddlewareInterface
     {
         return $request->getUri()->getScheme() === 'https';
     }
-
 
     private function parseRefererHeader(ServerRequestInterface $request): array
     {

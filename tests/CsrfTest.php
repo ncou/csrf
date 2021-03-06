@@ -9,17 +9,11 @@ use Chiron\Csrf\Config\CsrfConfig;
 use Chiron\Csrf\Exception\TokenMismatchException;
 use Chiron\Csrf\Middleware\CsrfProtectionMiddleware;
 use Chiron\Csrf\Middleware\CsrfTokenMiddleware;
-use Chiron\Http\Http;
 use Chiron\Security\Config\SecurityConfig;
-use Chiron\Security\Security;
 use Chiron\Security\Signer;
 use Chiron\Support\Random;
-use Closure;
 use LogicException;
 use Nyholm\Psr7\Response;
-use Nyholm\Psr7\ServerRequest;
-use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 class CsrfTest extends AbstractTestCase
@@ -31,7 +25,7 @@ class CsrfTest extends AbstractTestCase
         $this->container = new Container();
 
         $securityConfig = new SecurityConfig([
-            'key' => Random::hex(SecurityConfig::KEY_BYTES_SIZE)
+            'key' => Random::hex(SecurityConfig::KEY_BYTES_SIZE),
         ]);
         $this->container->bind(SecurityConfig::class, $securityConfig);
 
