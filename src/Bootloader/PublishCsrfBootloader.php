@@ -6,13 +6,13 @@ namespace Chiron\Csrf\Bootloader;
 
 use Chiron\Core\Container\Bootloader\AbstractBootloader;
 use Chiron\Core\Directories;
-use Chiron\PublishableCollection;
+use Chiron\Core\Publisher;
 
 final class PublishCsrfBootloader extends AbstractBootloader
 {
-    public function boot(PublishableCollection $publishable, Directories $directories): void
+    public function boot(Publisher $publisher, Directories $directories): void
     {
         // copy the configuration file template from the package "config" folder to the user "config" folder.
-        $publishable->add(__DIR__ . '/../../config/csrf.php.dist', $directories->get('@config/csrf.php'));
+        $publisher->add(__DIR__ . '/../../config/csrf.php.dist', $directories->get('@config/csrf.php'));
     }
 }

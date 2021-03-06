@@ -31,6 +31,7 @@ use Psr\Http\Server\RequestHandlerInterface;
  * @see https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#double-submit-cookie
  * @see https://tools.ietf.org/html/rfc7231#section-4.2.1
  */
+// TODO : renommer cette classe en CsrfTokenProtectionMiddleware ???
 final class CsrfProtectionMiddleware implements MiddlewareInterface
 {
     /**

@@ -19,7 +19,7 @@ final class TokenMismatchException extends PreconditionFailedHttpException
     public function __construct(?string $message = null)
     {
         if ($message === null) {
-            $message = 'Cannot access the specified resource because CSRF verification failed.';
+            $message = 'Cannot access the specified resource because CSRF Token verification failed.';
         }
 
         parent::__construct($message);

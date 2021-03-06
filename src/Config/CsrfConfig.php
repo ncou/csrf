@@ -42,4 +42,13 @@ final class CsrfConfig extends AbstractInjectableConfig
     {
         return $this->get('cookie_age');
     }
+
+    /**
+     * @return array
+     */
+    public function getTrustedOrigins(): array
+    {
+        //return $this->get('trusted_origins');
+        return [];
+    }
 }

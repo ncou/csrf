@@ -13,7 +13,7 @@ use Chiron\Http\Http;
 use Chiron\Security\Config\SecurityConfig;
 use Chiron\Security\Security;
 use Chiron\Security\Signer;
-use Chiron\Security\Support\Random;
+use Chiron\Support\Random;
 use Closure;
 use LogicException;
 use Nyholm\Psr7\Response;
@@ -96,7 +96,7 @@ class CsrfTest extends AbstractTestCase
 
     public function testGetWithGoodCookieToken(): void
     {
-        $id = Security::randomId(CsrfTokenMiddleware::TOKEN_LENGTH);
+        $id = Random::randomId(CsrfTokenMiddleware::TOKEN_LENGTH);
         $token = $this->signer->sign($id);
 
         $handler = static function (ServerRequestInterface $r) {
@@ -153,7 +153,7 @@ class CsrfTest extends AbstractTestCase
     public function testPostForbidden(): void
     {
         $this->expectException(TokenMismatchException::class);
-        $this->expectExceptionMessage('Cannot access the specified resource because CSRF verification failed.');
+        $this->expectExceptionMessage('Cannot access the specified resource because CSRF Token verification failed.');
 
         $handler = static function (ServerRequestInterface $r) {
                 $response = new Response();

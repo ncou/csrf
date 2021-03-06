@@ -9,7 +9,7 @@ use Chiron\Cookies\CookieFactory;
 use Chiron\Csrf\Config\CsrfConfig;
 use Chiron\Security\Exception\BadSignatureException;
 use Chiron\Security\Signer;
-use Chiron\Security\Support\Random;
+use Chiron\Support\Random;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
