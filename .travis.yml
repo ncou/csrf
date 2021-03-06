@@ -22,5 +22,11 @@ before_script:
     - composer install -n
     - if [ "$dependencies" = "lowest" ]; then composer update --prefer-lowest --prefer-stable -n; fi;
 
+after_script:
+  # Submit coverage report to Coveralls servers, see .coveralls.yml
+  - travis_retry php vendor/bin/php-coveralls -v
+  # Submit coverage report to codecov.io
+  - bash <(curl -s https://codecov.io/bash)
+
 script:
     - vendor/bin/phpunit
