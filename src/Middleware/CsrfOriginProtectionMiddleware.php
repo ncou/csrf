@@ -44,8 +44,7 @@ final class CsrfOriginProtectionMiddleware implements MiddlewareInterface
     private $csrfConfig;
 
     /**
-     * @param HttpConfig     $httpConfig
-     * @param SettingsConfig $settingsConfig
+     * @param CsrfConfig     $csrfConfig
      */
     public function __construct(CsrfConfig $csrfConfig)
     {
@@ -148,8 +147,8 @@ final class CsrfOriginProtectionMiddleware implements MiddlewareInterface
     {
         $trustedOrigins = $this->csrfConfig->getTrustedOrigins();
 
-        // Method getHost() includes the port.
-        $host = $this->getHost($request);
+        // Method getHost() includes the port (if it's non standard).
+        $host = $request->getUri()->getHost();
 
         // TODO : vérifier l'utilité de ce if $host === '' car je ne sais pas si ce cas peut arriver, et comment ca fonctionne si on ajoute d'officie le host vide dans le tableau comment va se comporter la méthode isSameDomain ????
         if ($host !== '') {
@@ -157,28 +156,6 @@ final class CsrfOriginProtectionMiddleware implements MiddlewareInterface
         }
 
         return $trustedOrigins;
-    }
-
-    /**
-     * Returns the HTTP host + port (if it's non-standard).
-     *
-     * @param ServerRequestInterface $request
-     *
-     * @return string
-     */
-    private function getHost(ServerRequestInterface $request): string
-    {
-        $host = $request->getUri()->getHost();
-        if ($host === '') {
-            return '';
-        }
-        // Standard ports are null (80, 443)
-        $port = $request->getUri()->getPort();
-        if ($port !== null) {
-            $host .= ':' . $port;
-        }
-
-        return $host;
     }
 
     private function isTrustedOrigin(string $origin, array $trustedOrigins): bool
