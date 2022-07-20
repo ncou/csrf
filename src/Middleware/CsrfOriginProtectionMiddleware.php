@@ -40,7 +40,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 // TODO : tester en ajoutant plusieurs fois le Referer Header dans la request !!!!
 final class CsrfOriginProtectionMiddleware implements MiddlewareInterface
 {
-    /** @var array */
+    /** @var CsrfConfig */
     private $csrfConfig;
 
     /**
